@@ -1,49 +1,82 @@
 library(sampling)
 library(dplyr)
-??sampling::UPsampford
 
 load("data/radiosTP2.RData")
 summary(radiosTP2)
 
 radiosTP2$Estrato <- as.factor(radiosTP2$Estrato)
-n_muestral_estratos <- c(6, 9, 3)
 
-# Separo radios en estratos para aplicar Sampford a cada uno
-get_unidades_estrato <- function(n){
+tomar_unidades_estrato <- function(n){
   radiosTP2[c(radiosTP2$Estrato == n),]
 }
-estratos <- lapply(c(1,2,3), get_unidades_estrato)
 
-# Genero las PIK por estrato, dados los tamanios muestrales propuestos
-adjuntar_piks <- function(estrato, n_muestral){
-  estrato$PIK <- inclusionprobabilities(estrato$Tviv, n_muestral)
+# Por estrato:
+generar_estratos <- function(UP) {
+
+  ids_estratos = as.numeric(levels(UP$Estrato))
+  n_muestral_estratos <- c(6, 9, 3)
+  estratos <- list()
+  
+  for (i in ids_estratos) {
+    
+    # Genero una lista con constantes fundamentales
+    estratos[[i]] = list(
+      id = i,
+      n = n_muestral_estratos[i]
+    )
+  }
+  
+  return(estratos)
+}
+
+procesar_estrato <- function(estrato) {
+  
+  # Adjunto las unidades primarias
+  estrato$UP <- tomar_unidades_estrato(estrato$id)
+
+  # Calculo las \Pi_(i|h)^UP
+  estrato$UP$PIK <- inclusionprobabilities(estrato$UP$Tviv, estrato$n)
+
+  # Calculo la matriz de \Pi_(ij|h)^UP
+  estrato$PIKL <- UPsampfordpi2(estrato$UP$PIK)
+
   return(estrato)
 }
 
-ids_estratos = as.numeric(levels(radiosTP2$Estrato))
-
-for (i in ids_estratos) {
-  estratos[[i]] <- adjuntar_piks(estratos[[i]], n_muestral_estratos[i])
+generar_muestra <- function(estrato) {
+  # Genero un vector de inclusion 'I' al azar
+  estrato$UP$I <- UPsampford(estrato$UP$PIK)
+  
+  # Separo la muestra 's' que le corresponde
+  estrato$s <- estrato$UP[as.logical(estrato$UP$I),]
+  
+  return(estrato)
 }
 
+
+chequear_consistencia <- function(estratos) {
+  for (estrato in estratos) {
+    print(sprintf("# Estrato %s", estrato$id))
+    print(sprintf("-- Todas las PIK menores a 1: %s", any(estrato$UP$PIK < 1)))
+    print(sprintf("-- La muestra 's' tiene tamanio 'n': %s", nrow(estrato$s) == estrato$n))
+  }
+}
 # Compruebo que ninguna PIK sea mayor a 1:
-for (i in 1:3) {
-  print(any(estratos[[i]]$PIK < 1))
-}
 # No hay!
 
 # Tomo una muestra por estrato y las compongo en una `muestra_completa`
-get_muestra <- function(estrato) {
-  vector_inclusion <- UPsampford(estrato$PIK)
-  return(estrato[as.logical(vector_inclusion),])
+
+estratos <- generar_estratos(radiosTP2)
+estratos <- lapply(estratos, procesar_estrato)
+estratos <- lapply(estratos, generar_muestra)
+chequear_consistencia(estratos)
+
+# Este pedazo podria volar ,lo mantengo por compatibilidad y temor
+muestras <- list()
+for (estrato in estratos) {
+  muestras[[estrato$id]] <- estrato$s
 }
-
-muestras <- lapply(estratos, get_muestra)
-
 muestra_completa <- rbind(
   muestras[[1]], muestras[[2]], muestras[[3]]
 )
 
-muestra_completa
-
-??UPsampfordpi2
