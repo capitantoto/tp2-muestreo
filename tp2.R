@@ -34,16 +34,33 @@ procesar_estrato <- function(estrato) {
   
   # Adjunto las unidades primarias
   estrato$UP <- tomar_unidades_estrato(estrato$id)
-
+  estrato$N_UP <- nrow(estrato$UP)
   # Calculo las \Pi_(i|h)^UP
   estrato$UP$PIK_UP <- inclusionprobabilities(estrato$UP$Tviv, estrato$nUP)
 
   # Calculo la matriz de \Pi_(ij|h)^UP
   estrato$PIKL_UP <- UPsampfordpi2(estrato$UP$PIK_UP)
-  
-  # El muestreo de segunda etapa es MSA, asi que las  
+
+  # Todas las viviendas (US) de un radio (UP) tienen la misma \Pi_(K|h)
+  # porque el disenio de 2da etapa es un MSA
   estrato$UP$PIK_US <- estrato$UP$PIK_UP * estrato$nUS / estrato$UP$Tviv
-  # estrato$PIKL_US <- 
+  
+  # Para la matriz de \Pi_(kl|h) hay que considerar varios casos
+  # -- Si k==l, entonces \Pi_(kl|h) = \Pi_(k|h) = \Pi_(i|h) * \Pi_(k|i)
+  estrato$UP$PIKL_US_k_eq_l <- estrato$UP$PIK_US
+  # Sea r(k) el radio censal de la vivienda k.
+  # -- Si k != l y r(k)==r(l)=i, entonces 
+  # -- \Pi_(kl|h) = = \Pi_(i|h) * \Pi_(kl|h)
+  estrato$UP$PIKL_US_i_eq_j <- estrato$UP$PIK_UP * (estrato$nUS / estrato$UP$Tviv) * ((estrato$nUS - 1) / (estrato$UP$Tviv - 1))
+  
+  # -- Si i != j entonces \Pi_(kl|h) = \Pi_(ij/h) *\Pi_(k|i) * \Pi_(l|j)
+  estrato$PIKL_US_i_ne_j <- matrix(nrow = estrato$N_UP, ncol = estrato$N_UP)
+  
+  for (i in 1:estrato$N_UP) {
+    for (j in 1:estrato$N_UP) {
+      estrato$PIKL_US_i_ne_j[i,j] <-estrato$PIKL_UP[i,j] * estrato$UP$PIK_US[i] * estrato$UP$PIK_US[j]
+    }
+  }
   return(estrato)
 }
 
