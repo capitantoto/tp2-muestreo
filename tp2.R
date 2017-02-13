@@ -82,10 +82,13 @@ chequear_consistencia <- function(estratos) {
                   any(estrato$UP$PIK_UP < 1)))
     print(sprintf("-- La muestra 's' tiene tamanio 'n': %s",
                   nrow(estrato$s) == estrato$nUP))
+    print(sprintf("-- El estimador de la VHT es insesgado (UP$PIKL > 0): %s",
+                  all(estrato$PIKL_UP > 0)))
+    print(sprintf("-- VSGY <= VH (DeltaKL <= 0): %s",
+                  all(estrato$PIKL_UP-diag(diag(estrato$UP$PIK_UP))<=0)))
   }
 }
-# Compruebo que ninguna PIK sea mayor a 1:
-# No hay!
+
 
 # Tomo una muestra por estrato y las compongo en una `muestra_completa`
 
@@ -103,3 +106,12 @@ muestra_completa <- rbind(
   muestras[[1]], muestras[[2]], muestras[[3]]
 )
 
+load("data/muestraTP2.RData")
+
+#### ES INSESGADO LA VHT (Pikl>0) ?
+#all(PIKLsampf>0)
+
+#### ES DeltaKL <=0 para VSGY<=VHT ?
+#all(PIKLsampf-diag(diag(PIK))<=0)
+# Probabilidades de 2do Orden de la muestra
+#PIKLsampf=PIKLsampf[seleccion2,seleccion2]
