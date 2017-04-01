@@ -47,11 +47,11 @@ El siguiente fragmento de código ejecuta una serie de operaciones:
 * Asignar los tamaños muestrales de primera y segunda etapa a todos los radios según su estrato.
 * Agrupar los radios por estrato, y para cada uno,
     + Asignar un ID "intra-estrato" a cada radio,
-    + Calcular las probabilidades de inclusión de primer orden $\pi_{hi}^{UP}$ (pedido en **1.b**) (`PIK_UP`) para los radios, proporcionales a la cantidad de viviendas `Tviv` en cada uno, 
-  + Generar un vector `I` que indica la pertenencia a la muestra de UP, segun el método de Sampford, con probabilidades de inclusión `PIK_UP`,
-  + Calcular las probablidades de inclusión de primer orden para las US (viviendas) _dentro de cada radio_, $\pi_{k|h}$ (`PIK_US_RADIO`) (pedido en **1.c**),
+    + Calcular las probabilidades de inclusión de primer orden $\pi_{hi}^{UP}$ (`PIK_UP`) para los radios, proporcionales a la cantidad de viviendas `Tviv` en cada uno, 
+  + Generar un vector `I` que indica la pertenencia a la muestra de unidades primarias, según el método de Sampford, con probabilidades de inclusión `PIK_UP`,
+  + Calcular las probablidades de inclusión de primer orden para las US (viviendas) _dentro de cada radio_, $\pi_{k|h}$ (`PIK_US_RADIO`),
   + Calcular las probabilidades de inclusión de segundo orden para los pares de US _dentro de un mismo radio_, $\pi_{kl|h}$ (`PIKL_US_RADIO`), y
-  + Calcular las probablidades de inclusión de primer orden para las US (viviendas) _dentro de la muesta completa_, $\pi_{k} = \pi_{hi}^{UP} \times \pi_{kl|h}$ (`PIK_US_RADIO`)
+  + Calcular las probablidades de inclusión de primer orden para las US (viviendas) _dentro de la muesta completa_, $\pi_{k} = \pi_{hi}^{UP} \times \pi_{kl|h}$ (`PIK_US`)
   
 ```{r manipulacion_radios}
 radiosTP2 %>%
@@ -69,8 +69,8 @@ radiosTP2 %>%
   ungroup() -> radios
 ```
 
-### Calculo de probabilidades de inclusion de segundo orden
-El siguiente bloque calcular las $\pi_{hij}^{UP}$ para las viviendas en cada estrato, como se pide en **1.b**.
+### Cálculo de probabilidades de inclusión de segundo orden
+El siguiente bloque calcular las $\pi_{h,ij}^{UP}$ para cada par de radios pertenecientes a un mismo estrato estrato $h$.
 ```{r calculo_pikl_up}
 PIKL_UP_por_estrato <- map(
   c(1:3),
@@ -81,7 +81,7 @@ PIKL_UP_por_estrato <- map(
 ```
 
 ### Selección de la muestra de Unidades Primarias
-Utilizando el vector `I` de `radios` creado previamente, filtrar el marco con los radios para quedarnos únicamente con la muestra elegida es muy sencillo. Para poder asociarla fácilmente al marco de viviendas que cargaremos a continuación, agregamos _otro_ identificador más a los radios, `upm`.
+Filtramos los `radios` por el vector de inclusión `I` para quedarnos únicamente con la muestra elegida. Para poder asociarla fácilmente al marco de viviendas que cargaremos a continuación, agregamos _otro_ identificador más a los radios, `upm`.
 
 ```{r seleccionar_muestra}
 radios %>%
@@ -91,9 +91,9 @@ radios %>%
   ungroup -> muestra_radios
 ```
 
-Como se pide en **1.b**, a continuación se presenta un resumen con las unidades seleccionadas y sus respectivas probabilidades $\pi_{hi}^{UP}$ de primera etapa.
+A continuación se presenta un resumen con las unidades seleccionadas y sus respectivas probabilidades $\pi_{h,i}^{UP}$ de primera etapa.
 
-```{r presentar_muestra}
+```{r presentar_muestra, echo=FALSE}
 muestra_radios %>% select (Estrato, Radio, Tviv, PIK_UP) 
 ```
 
@@ -109,7 +109,7 @@ map(c(1:3), get_pikl_up_muestra_estrato)
 
 ### Sobre $\Delta_{kl}$
 
-Recordemos que $\Delta_{kl} = \pi_{kl} - \pi_{k} \times \pi_{l}$. Como la selección de radios y hogares dentro de un estrato es absolutamente independientes de lo que suceda en los demás, cuando $k$ y $l$ pertenecen a distintos estratos, $\pi_{kl} - \pi_{k} \times \pi_{l}$. Luego,
+Recordemos que $\Delta_{kl} = \pi_{kl} - \pi_{k} \times \pi_{l}$. Como la selección de radios y hogares dentro de un estrato es absolutamente independientes de lo que suceda en los demás, cuando $k$ y $l$ pertenecen a distintos estratos, $\pi_{kl} = \pi_{k} \times \pi_{l}$. Luego,
 $$
 \begin{align}
 \Delta_{kl} &= \pi_{kl} - \pi_{k} \times \pi_{l} \\
@@ -122,14 +122,15 @@ $$
 
 ### Manipulación y adición de variables útiles
 
-A continuación, vamos a precalcular algunas variables útiles a nivel de viviendas. Las declaraciones de la mayoría son autoexplicativas.
+A continuación, calculamos algunas variables útiles a nivel de viviendas: $1$ (`uno`), $n$, $N$, $i$ (`id_vivienda`),$\pi_{k,MSA}$ . Las declaraciones de la mayoría son autoexplicativas.
 
-La única que merece atención especial, puede ser $N$, que a falta de un dato exacto, es nuestra mejor estimación de tamaño de la población de viviendas.
+Al no conocer la cantidad exacta de hogares de la población, $N$ debe ser estimado. Presentamos dos formas equivalentes de hacerlo.
 
-Para concluir este bloque, fusionamos los datos de cda US (vivienda) junto con los de su UP (radio) "padre", y llamamos a este extenso marco de datos `viviendas`. A partir de él calcularemos las $\pi_{kl}$ de US, y los distintos estimadores propuestos.
+Para concluir este bloque, fusionamos los datos de cada vivienda junto con los de su radio "padre", y llamamos a este extenso marco de datos `viviendas`. A partir de él calcularemos las $\pi_{kl}$ de US, y los distintos estimadores propuestos.
 
 ```{r manipulacion_viviendas}
 N <- Est.Total.NHT(muestra_radios$Tviv, muestra_radios$PIK_UP)
+# Alternativamente, N <- Est.Total.NHT(viviendas$uno, viviendas$PIK_US)
 
 muestraTP2 %>%
   mutate(
@@ -142,11 +143,12 @@ muestraTP2 %>%
     FtTot = FTedad2 + FTedad3 + FTedad4,
     OcupTot = Oedad2 + Oedad3 + Oedad4,
     DesocTot = FtTot - OcupTot,
+    # clasificación según tamaño
     clase = ifelse(totper >= 5,  "D",
                    ifelse(totper >= 3, "C",
                           ifelse(totper == 2, "B", "A")))
     ) %>%
-  # Adjunto valores de radios a sus respectivas viviendas
+  # Adjuntamos valores de radios a sus respectivas viviendas
   merge(muestra_radios, 
         by = c("Estrato", "upm")) %>%
   as_data_frame -> viviendas
@@ -160,13 +162,13 @@ El último paso importante antes de comenzar a estimar los indicadores propuesto
 Sean $(H_{k}, H_{l})$ y $(R_{k}, R_{l})$ los estratos y radios a los que pertenecen $k$ y $l$, respectivamente. Para todo par de viviendas $(k, l)$, debemos considerar 4 posibles casos, _en el siguiente orden_:
 
 1. Si $H_{k} \neq H_{l}$, entonces $\pi_{kl} = \pi_{k} \times \pi_{l}$, donde $\pi_{k} = \pi_{H_k,i}^{UP} \times \pi_{k|i}$.
-2. Si $R_{k} \neq R_{l}$, entonces $\pi_{kl}= \pi_{H_k,ij}^{UP} \times \pi_{k|i} \times \pi_{l|j}$.
-3. Si $k \neq l$, entonces $\pi_{kl} = \pi_{H_k,i}^{UP} \times \pi_{kl|i}$, y
+2. Si $R_{k} \neq R_{l}$ (y $H_{k} = H_{l}$), entonces $\pi_{kl}= \pi_{H_k,ij}^{UP} \times \pi_{k|i} \times \pi_{l|j}$.
+3. Si $k \neq l$ (y $R_{k} = R_{l}$), entonces $\pi_{kl} = \pi_{H_k,i}^{UP} \times \pi_{kl|i}$, y
 4. Si $k = l$, entonces $\pi_{kl} = \pi_{k} = \pi_{l}$
 
-A continuación, un conjunto de funciones que implementan el cómputo de la _supermatriz_ de $\pi_{kl}$:
+A continuación, el cómputo de la _supermatriz_ de $\pi_{kl}$ se implementa en dos funciones:
 
-* `calcular_pikl_us` calcular $\pi_{kl}$ para un par de viviendas $(k,l)$, y
+* `calcular_pikl_us` calcula $\pi_{kl}$ para un par de viviendas $(k,l)$, y
 * `generar_PIKL_US` construye la supermatriz iterando `calcular_pikl_us` sobre todo par $(k,l)$
 
 ```{r generar_pikl}
@@ -210,9 +212,9 @@ generar_PIKL_US <- function(viviendas) {
 }
 ```
 
-Para estimar el efecto que tiene nuestro diseño en dos etapas, necesitamos comparar las varianzas obtenidas contr las que obtendríamos en caso de utilizar un MSA simple en una sola etapa. Hay más de una forma de calcular la varianza de un MSA: por ejemplo, en clase utilizamos los comandos `varHT` y `varest` de `sampling`, por ejemplo, o se puede computar la fórmula simplificada que depende sólo de $N$, $n$ y $S_{y}^2$. 
+Para estimar el efecto que tiene nuestro diseño en dos etapas, necesitamos comparar las varianzas obtenidas contra las que obtendríamos en caso de utilizar un MSA simple en una sola etapa. Hay más de una forma de calcular la varianza de un MSA. Por ejemplo, con los comandos `varHT` y `varest` de `sampling`, o computando directamente $V_{MSA} = N^{2} \left( \frac{1}{n} - \frac{1}{N} \right)S_{y}^{2}$ . 
 
-Sin embargo, en aras de la consistencia, vamos a seguir un camino tal vez innecesariamente complicado, y utilizar los mismos comandos que para la varianza bajo nuestro diseño. Para ello, necesitaremos una función que genere las $\pi_{kl}$ bajo un MSA genérico de población $N$ y tamaño muestral $n$, como la siguiente:
+Sin embargo, en aras de la consistencia, vamos a seguir un camino _tal vez_ innecesariamente complicado, y utilizar los mismos comandos que para la varianza bajo el diseño en dos etapas, la familia de `samplingVarEst::VE.*` Para ello, necesitaremos una función que genere las $\pi_{kl}^{MSA}$ para cualquier de población $N$ y tamaño muestral $n$, como la siguiente:
 
 ```{r generar_pikl_msa}
 generar_pikl_msa <- function(n, N) {
@@ -225,7 +227,7 @@ generar_pikl_msa <- function(n, N) {
 
 Sin más preámbulos, generamos ambas matrices de $\pi_{kl}$.
 
-_Nota: Como no logré vectorizarlo, el cálculo de `PIKL_US` lleva casi una hora en mi computadora. En consecuencia, aquí se encuentra comentado, y en su lugar carga el archivo binario donde se encuentra precomputada._
+_Nota: Como no logré vectorizarlo, el cálculo de_ $\pi_{kl}$ (`PIKL_US`) _lleva casi una hora en mi computadora. En consecuencia, aquí se encuentra comentado, y en su lugar se carga un archivo binario precomputado.__
 
 ```{r calcular_pikls}
 # PIKL_US <- generar_PIKL_US(viviendas)
@@ -239,9 +241,9 @@ PIKL_US_MSA <- generar_pikl_msa(1230, 22390)
 Entre los estimadores a calcular, podemos distinguir 2 grupos:
 
 1. estimadores poblacionales, que a su vez pueden ser
-  * totales (población, PEA, # desocupados) o
-  * razones (proporción de cobertura de salud según sexo, tasa de desaocupación);
-2. estimadores por dominio, que son todos promedios: por tamaño del hogar o presencia de niños menores de 10 años.
+  * totales (población, PEA, et cetera) o
+  * razones (proporción de cobertura de salud según sexo, tasa de desaocupación, et cetera);
+2. estimadores por dominio de promedios (ingreso medio por tamaño del hogar o presencia de niños menores de 10 años).
 
 En realidad, hay un caso de estimador poblacional de un promedio, el "Ingreso promedio en los hogares". Sin embargo, si lo consideramos como un estimador por dominio sobre la variable auxiliar "uno", nuestra clasificación se mantiene ilesa, y podemos escribir una función menos.
 
@@ -289,27 +291,27 @@ construir_estimador_razon <- function(df, y, x){
     )
 }
 
-ingreso_medio_por_dominio <- function(var_dominio){
+promedio_por_dominio <- function(var_dominio, var_promedio){
 viviendas %>%
   group_by(dominio = viviendas[[var_dominio]]) %>%
   mutate(n_clase = n(),
          N_clase = round(Est.Total.NHT(uno, PIK_US)),
          PIK_US_MSA_dom = n_clase / N_clase) %>%
-  summarise(ingreso_medio = Est.Mean.NHT(ingresoh, PIK_US, max(N_clase)),
-            var_2s = VE.HT.Mean.NHT(ingresoh, PIK_US, 
-                                 PIKL_US[id_vivienda, id_vivienda],
-                                 max(N_clase)),
-            var_msa = VE.HT.Mean.NHT(ingresoh, PIK_US_MSA_dom, 
-                                  generar_pikl_msa(max(n_clase), max(N_clase)),
-                                  max(N_clase)),
-            cv = sqrt(var_2s) / ingreso_medio,
-            deff = var_2s / var_msa
-         
+  summarise(
+    ingreso_medio = Est.Mean.NHT(.[[var_promedio]], PIK_US, max(N_clase)),
+    var_2s = VE.HT.Mean.NHT(ingresoh, PIK_US, 
+                            PIKL_US[id_vivienda, id_vivienda],
+                            max(N_clase)),
+    var_msa = VE.HT.Mean.NHT(ingresoh, PIK_US_MSA_dom,
+                             generar_pikl_msa(max(n_clase), max(N_clase)),
+                             max(N_clase)),
+    cv = sqrt(var_2s) / ingreso_medio,
+    deff = var_2s / var_msa
   )
 }
 ```
 
-Para concluir, a continuación calculamos los estimadores y presentamos los resultados.  Veremos algunas advertencias de que el denominador tiene valores iguales a cero, lo cual es normal a nivel de viviendas.
+Para concluir, calculamos los estimadores y presentamos los resultados.  Veremos algunas advertencias de que en algunos casos, elementos del vector denominador tiene valores iguales a cero, lo cual es normal en este tipo de variables.
 
 ```{r calculo_estimadores}
 cocientes <- read.csv("data/cocientes.csv", as.is=TRUE)
@@ -320,9 +322,9 @@ totales <- c("totper", "FtTot", "DesocTot")
 cet_viviendas <- function(x) (construir_estimador_total(viviendas, x))
 totales_poblacionales <- map_df(totales, cet_viviendas)
 
-ingreso_medio <- ingreso_medio_por_dominio("uno")
-ingreso_medio_hog10 <- ingreso_medio_por_dominio("hog10")
-ingreso_medio_clase <- ingreso_medio_por_dominio("clase")
+ingreso_medio <- promedio_por_dominio("uno", "ingresoh")
+ingreso_medio_hog10 <- ingreso_medio_por_dominio("hog10", "ingresoh")
+ingreso_medio_clase <- ingreso_medio_por_dominio("clase", "ingresoh")
 ```
 
 # Resultados
