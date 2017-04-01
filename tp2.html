@@ -11,7 +11,6 @@
 
 <meta name="author" content="Gonzalo Barrera Borla" />
 
-<meta name="date" content="2017-03-31" />
 
 <title>MPF: Trabajo Práctico 2</title>
 
@@ -119,7 +118,7 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">MPF: Trabajo Práctico 2</h1>
 <h4 class="author"><em>Gonzalo Barrera Borla</em></h4>
-<h4 class="date"><em>March 31, 2017</em></h4>
+<h4 class="date"><em>Marzo 31, 2017</em></h4>
 
 </div>
 
@@ -135,7 +134,11 @@ library(purrr)</code></pre>
 </div>
 <div id="carga-de-datos" class="section level2">
 <h2>Carga de datos</h2>
-<p>Además de la información referente a las unidades primarias (radios censales) y secundarias (viviendas) en sí, incluimos la cantidad de radios a tomar de cada estrato (<code>n_UP_por_estrato</code>) y la cantidad de viviendas en cada radio (<code>n_US_por_radio</code>), segun su estrato de pertenencia.</p>
+<p>Además de la información referente a las unidades primarias (<code>radiosTP2</code>) y secundarias (<code>muestraTP2</code>) en sí, incluimos</p>
+<ul>
+<li>la cantidad de radios a tomar de cada estrato (<code>n_UP_por_estrato</code>) y</li>
+<li>la cantidad de viviendas en cada radio (<code>n_US_por_radio</code>), según el estrato al que pertenencen.</li>
+</ul>
 <pre class="r"><code>load(&quot;data/radiosTP2.RData&quot;)
 load(&quot;data/muestraTP2.RData&quot;)
 
@@ -145,7 +148,7 @@ n_US_por_radio &lt;- c(90, 50, 80)</code></pre>
 </div>
 <div id="manipulacion-de-datos" class="section level1">
 <h1>Manipulacion de datos</h1>
-<p>A lo largo del TP se utilizaron intensamente las librerías <code>dplyr</code> y <code>purrr</code> junto con el operador <code>%&gt;%</code> (análogo a un <em>pipe</em> ‘|’ de UNIX) de <code>magrittr</code> para manipular los datos originales, y computar estadísticas sobre ellos.</p>
+<p>A lo largo del TP se utilizaron intensamente las librerías <a href="doc/dplyr.pdf">dplyr</a> y <a href="doc/purrr.pdf">purrr</a> junto con el operador <code>%&gt;%</code> (análogo a un <em>pipe</em> ‘|’ de UNIX, importado de <code>magrittr</code>) para manipular los datos originales, y computar estadísticas sobre ellos.</p>
 <div id="radios" class="section level2">
 <h2>Radios</h2>
 <div id="manipulacion-y-adicion-de-variables-utiles" class="section level3">
@@ -195,59 +198,59 @@ n_US_por_radio &lt;- c(90, 50, 80)</code></pre>
   ungroup -&gt; muestra_radios</code></pre>
 <p>Como se pide en <strong>1.b</strong>, a continuación se presenta un resumen con las unidades seleccionadas y sus respectivas probabilidades <span class="math inline">\(\pi_{hi}^{UP}\)</span> de primera etapa.</p>
 <pre class="r"><code>muestra_radios %&gt;% select (Estrato, Radio, Tviv, PIK_UP) </code></pre>
-<pre><code>## # A tibble: 18 × 4
-##    Estrato Radio  Tviv    PIK_UP
-##      &lt;int&gt; &lt;int&gt; &lt;int&gt;     &lt;dbl&gt;
-## 1        1    12   386 0.2451831
-## 2        1    34   337 0.2140589
-## 3        1    48   381 0.2420072
-## 4        1    58   429 0.2724963
-## 5        1    59   415 0.2636036
-## 6        1    62   315 0.2000847
-## 7        2     4   281 0.2473350
-## 8        2    15   393 0.3459169
-## 9        2    19   407 0.3582396
-## 10       2    20   289 0.2543765
-## 11       2    22   325 0.2860636
-## 12       2    27   376 0.3309535
-## 13       2    31   345 0.3036675
-## 14       2    38   306 0.2693399
-## 15       2    43   379 0.3335941
-## 16       3    17   292 0.3221773
-## 17       3    24   283 0.3122471
-## 18       3    30   401 0.4424421</code></pre>
+<pre><code># A tibble: 18 × 4
+   Estrato Radio  Tviv    PIK_UP
+     &lt;int&gt; &lt;int&gt; &lt;int&gt;     &lt;dbl&gt;
+1        1     5   354 0.2248571
+2        1     6   345 0.2191404
+3        1     8   389 0.2470887
+4        1    13   414 0.2629685
+5        1    14   416 0.2642388
+6        1    18   297 0.1886513
+7        2    20   289 0.2543765
+8        2    23   422 0.3714425
+9        2    32   322 0.2834230
+10       2    38   306 0.2693399
+11       2    40   321 0.2825428
+12       2    47   387 0.3406357
+13       2    50   322 0.2834230
+14       2    56   314 0.2763814
+15       2    64   334 0.2939853
+16       3    10   397 0.4380287
+17       3    30   401 0.4424421
+18       3    44   306 0.3376241</code></pre>
 <p>Para completar, incluimos el conjunto de las <span class="math inline">\(\pi_{hij}^{UP}\)</span> para las unidades seleccionadas, por estrato:</p>
 <pre class="r"><code>get_pikl_up_muestra_estrato &lt;- function(i) {
   muestra_radios %&gt;% filter(Estrato == i) %&gt;% .[[&quot;id_radio_intra_estrato&quot;]] -&gt; inc
   return(round(PIKL_UP_por_estrato[[i]][inc, inc], 4))
 }
 map(c(1:3), get_pikl_up_muestra_estrato)</code></pre>
-<pre><code>## [[1]]
-##        [,1]   [,2]   [,3]   [,4]   [,5]   [,6]
-## [1,] 0.2452 0.0454 0.0516 0.0585 0.0565 0.0424
-## [2,] 0.0454 0.2141 0.0448 0.0508 0.0490 0.0368
-## [3,] 0.0516 0.0448 0.2420 0.0577 0.0557 0.0418
-## [4,] 0.0585 0.0508 0.0577 0.2725 0.0630 0.0473
-## [5,] 0.0565 0.0490 0.0557 0.0630 0.2636 0.0457
-## [6,] 0.0424 0.0368 0.0418 0.0473 0.0457 0.2001
-## 
-## [[2]]
-##         [,1]   [,2]   [,3]   [,4]   [,5]   [,6]   [,7]   [,8]   [,9]
-##  [1,] 0.2473 0.0786 0.0815 0.0571 0.0645 0.0751 0.0686 0.0606 0.0757
-##  [2,] 0.0786 0.3459 0.1153 0.0809 0.0913 0.1062 0.0971 0.0858 0.1070
-##  [3,] 0.0815 0.1153 0.3582 0.0839 0.0947 0.1101 0.1007 0.0890 0.1110
-##  [4,] 0.0571 0.0809 0.0839 0.2544 0.0664 0.0773 0.0706 0.0624 0.0779
-##  [5,] 0.0645 0.0913 0.0947 0.0664 0.2861 0.0872 0.0797 0.0704 0.0879
-##  [6,] 0.0751 0.1062 0.1101 0.0773 0.0872 0.3310 0.0927 0.0819 0.1022
-##  [7,] 0.0686 0.0971 0.1007 0.0706 0.0797 0.0927 0.3037 0.0749 0.0935
-##  [8,] 0.0606 0.0858 0.0890 0.0624 0.0704 0.0819 0.0749 0.2693 0.0826
-##  [9,] 0.0757 0.1070 0.1110 0.0779 0.0879 0.1022 0.0935 0.0826 0.3336
-## 
-## [[3]]
-##        [,1]   [,2]   [,3]
-## [1,] 0.3222 0.0723 0.1091
-## [2,] 0.0723 0.3122 0.1053
-## [3,] 0.1091 0.1053 0.4424</code></pre>
+<pre><code>[[1]]
+       [,1]   [,2]   [,3]   [,4]   [,5]   [,6]
+[1,] 0.2249 0.0425 0.0482 0.0515 0.0517 0.0364
+[2,] 0.0425 0.2191 0.0469 0.0501 0.0504 0.0355
+[3,] 0.0482 0.0469 0.2471 0.0568 0.0571 0.0402
+[4,] 0.0515 0.0501 0.0568 0.2630 0.0609 0.0429
+[5,] 0.0517 0.0504 0.0571 0.0609 0.2642 0.0431
+[6,] 0.0364 0.0355 0.0402 0.0429 0.0431 0.1887
+
+[[2]]
+        [,1]   [,2]   [,3]   [,4]   [,5]   [,6]   [,7]   [,8]   [,9]
+ [1,] 0.2544 0.0872 0.0658 0.0624 0.0655 0.0796 0.0658 0.0641 0.0683
+ [2,] 0.0872 0.3714 0.0974 0.0924 0.0971 0.1178 0.0974 0.0949 0.1012
+ [3,] 0.0658 0.0974 0.2834 0.0698 0.0733 0.0890 0.0735 0.0716 0.0764
+ [4,] 0.0624 0.0924 0.0698 0.2693 0.0695 0.0844 0.0698 0.0680 0.0724
+ [5,] 0.0655 0.0971 0.0733 0.0695 0.2825 0.0887 0.0733 0.0714 0.0761
+ [6,] 0.0796 0.1178 0.0890 0.0844 0.0887 0.3406 0.0890 0.0867 0.0924
+ [7,] 0.0658 0.0974 0.0735 0.0698 0.0733 0.0890 0.2834 0.0716 0.0764
+ [8,] 0.0641 0.0949 0.0716 0.0680 0.0714 0.0867 0.0716 0.2764 0.0744
+ [9,] 0.0683 0.1012 0.0764 0.0724 0.0761 0.0924 0.0764 0.0744 0.2940
+
+[[3]]
+       [,1]   [,2]   [,3]
+[1,] 0.4380 0.1556 0.1136
+[2,] 0.1556 0.4424 0.1150
+[3,] 0.1136 0.1150 0.3376</code></pre>
 </div>
 <div id="sobre-delta_kl" class="section level3">
 <h3>Sobre <span class="math inline">\(\Delta_{kl}\)</span></h3>
@@ -357,8 +360,9 @@ PIKL_US &lt;- readRDS(&quot;data/pikl_us.rds&quot;)
 PIKL_US_MSA &lt;- generar_pikl_msa(1230, 22390)</code></pre>
 </div>
 </div>
-<div id="estimacion-de-indicadores" class="section level2">
-<h2>Estimación de indicadores</h2>
+</div>
+<div id="estimacion-de-indicadores" class="section level1">
+<h1>Estimación de indicadores</h1>
 <p>Entre los estimadores a calcular, podemos distinguir 2 grupos:</p>
 <ol style="list-style-type: decimal">
 <li>estimadores poblacionales, que a su vez pueden ser</li>
@@ -411,14 +415,6 @@ construir_estimador_razon &lt;- function(df, y, x){
     )
 }
 
-calcular_indicadores &lt;- function(df, y, x) {
-    if (x == ''){
-    construir_estimador_total(df, y)
-  } else
-    construir_estimador_razon(df, y, x)
-}
-
-
 ingreso_medio_por_dominio &lt;- function(var_dominio){
 viviendas %&gt;%
   group_by(dominio = viviendas[[var_dominio]]) %&gt;%
@@ -439,56 +435,77 @@ viviendas %&gt;%
 }</code></pre>
 <p>Para concluir, a continuación calculamos los estimadores y presentamos los resultados. Veremos algunas advertencias de que el denominador tiene valores iguales a cero, lo cual es normal a nivel de viviendas.</p>
 <pre class="r"><code>cocientes &lt;- read.csv(&quot;data/cocientes.csv&quot;, as.is=TRUE)
-map2_df(cocientes$y, cocientes$x,
-          function(y, x) (calcular_indicadores(viviendas, y, x))) -&gt; resultados_globales</code></pre>
-<pre><code>## Warning in Est.Ratio(.[[&quot;DesocTot&quot;]], .[[&quot;FtTot&quot;]], c(0.0571670548380267, :
-## There are zero values in the denominator variable VecX.s.</code></pre>
-<pre><code>## Warning in VE.Lin.HT.Ratio(.[[&quot;DesocTot&quot;]], .[[&quot;FtTot&quot;]],
-## c(0.0571670548380267, : There are zero values in the denominator variable
-## VecX.s.</code></pre>
-<pre><code>## Warning in Est.Ratio(VecY.s, VecX.s, VecPk.s): There are zero values in the
-## denominator variable VecX.s.</code></pre>
-<pre><code>## Warning in VE.Lin.HT.Ratio(.[[&quot;DesocTot&quot;]], .[[&quot;FtTot&quot;]],
-## c(0.054935238945958, : There are zero values in the denominator variable
-## VecX.s.</code></pre>
-<pre><code>## Warning in Est.Ratio(VecY.s, VecX.s, VecPk.s): There are zero values in the
-## denominator variable VecX.s.</code></pre>
-<pre class="r"><code>ingreso_medio &lt;- ingreso_medio_por_dominio(&quot;uno&quot;)
-ingreso_medio_hog10 &lt;- ingreso_medio_por_dominio(&quot;hog10&quot;)
-ingreso_medio_clase &lt;- ingreso_medio_por_dominio(&quot;clase&quot;)
+cer_viviendas &lt;- function(y, x) (construir_estimador_razon(viviendas, y, x))
+cocientes_poblacionales &lt;- map2_df(cocientes$y, cocientes$x, cer_viviendas)</code></pre>
+<pre><code>Warning in Est.Ratio(.[[&quot;DesocTot&quot;]], .[[&quot;FtTot&quot;]], c(0.0571670548380267, :
+There are zero values in the denominator variable VecX.s.</code></pre>
+<pre><code>Warning in VE.Lin.HT.Ratio(.[[&quot;DesocTot&quot;]], .[[&quot;FtTot&quot;]],
+c(0.0571670548380267, : There are zero values in the denominator variable
+VecX.s.</code></pre>
+<pre><code>Warning in Est.Ratio(VecY.s, VecX.s, VecPk.s): There are zero values in the
+denominator variable VecX.s.</code></pre>
+<pre><code>Warning in VE.Lin.HT.Ratio(.[[&quot;DesocTot&quot;]], .[[&quot;FtTot&quot;]],
+c(0.054935238945958, : There are zero values in the denominator variable
+VecX.s.</code></pre>
+<pre><code>Warning in Est.Ratio(VecY.s, VecX.s, VecPk.s): There are zero values in the
+denominator variable VecX.s.</code></pre>
+<pre class="r"><code>totales &lt;- c(&quot;totper&quot;, &quot;FtTot&quot;, &quot;DesocTot&quot;)
+cet_viviendas &lt;- function(x) (construir_estimador_total(viviendas, x))
+totales_poblacionales &lt;- map_df(totales, cet_viviendas)
 
-resultados_globales</code></pre>
-<pre><code>## # A tibble: 8 × 6
-##                name          est       var_2s      var_msa          cv
-##               &lt;chr&gt;        &lt;dbl&gt;        &lt;dbl&gt;        &lt;dbl&gt;       &lt;dbl&gt;
-## 1            totper 7.573041e+04 4.243882e+06 1.252763e+06 0.027202657
-## 2 SaludTot / totper 6.470907e-01 1.784527e-06 6.397187e-07 0.002064412
-## 3   SaludF / totper 3.027809e-01 3.130972e-07 2.215303e-07 0.001848039
-## 4   SaludM / totper 3.443098e-01 8.025358e-07 2.490981e-07 0.002601854
-## 5  salud55 / totper 1.593819e-01 4.380368e-07 1.647891e-07 0.004152563
-## 6             FtTot 4.940804e+04 1.677431e+06 7.703606e+05 0.026213483
-## 7          DesocTot 6.730768e+03 1.131406e+05 1.173030e+05 0.049974052
-## 8  DesocTot / FtTot 1.362282e-01 1.216479e-07 1.226213e-07 0.002560267
-## # ... with 1 more variables: deff &lt;dbl&gt;</code></pre>
-<pre class="r"><code>ingreso_medio</code></pre>
-<pre><code>## # A tibble: 1 × 6
-##   dominio ingreso_medio   var_2s  var_msa         cv     deff
-##     &lt;dbl&gt;         &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;      &lt;dbl&gt;    &lt;dbl&gt;
-## 1       1      19440.56 265076.9 148632.9 0.02648361 1.783434</code></pre>
-<pre class="r"><code>ingreso_medio_hog10</code></pre>
-<pre><code>## # A tibble: 2 × 6
-##   dominio ingreso_medio    var_2s  var_msa         cv     deff
-##     &lt;dbl&gt;         &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;      &lt;dbl&gt;    &lt;dbl&gt;
-## 1       0      18988.56  527964.8 221763.8 0.03826576 2.380753
-## 2       1      20294.39 2053888.1 447791.5 0.07061751 4.586706</code></pre>
-<pre class="r"><code>ingreso_medio_clase</code></pre>
-<pre><code>## # A tibble: 4 × 6
-##   dominio ingreso_medio    var_2s  var_msa         cv     deff
-##     &lt;chr&gt;         &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;      &lt;dbl&gt;    &lt;dbl&gt;
-## 1       A      8063.258  785731.9 264070.0 0.10993263 2.975468
-## 2       B     15580.957 1748392.7 342162.7 0.08486436 5.109828
-## 3       C     21033.034  782957.4 309252.3 0.04206948 2.531776
-## 4       D     27102.818 3864392.0 877847.0 0.07253141 4.402125</code></pre>
+ingreso_medio &lt;- ingreso_medio_por_dominio(&quot;uno&quot;)
+ingreso_medio_hog10 &lt;- ingreso_medio_por_dominio(&quot;hog10&quot;)
+ingreso_medio_clase &lt;- ingreso_medio_por_dominio(&quot;clase&quot;)</code></pre>
+</div>
+<div id="resultados" class="section level1">
+<h1>Resultados</h1>
+<div id="cocientes-poblacionales" class="section level2">
+<h2>Cocientes Poblacionales</h2>
+<pre><code># A tibble: 5 × 6
+               name    est     var_2s   var_msa       cv   deff
+              &lt;chr&gt;  &lt;dbl&gt;      &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;
+1 SaludTot / totper 0.6471 1.7845e-06 6.397e-07 0.002064 2.7895
+2   SaludF / totper 0.3028 3.1310e-07 2.215e-07 0.001848 1.4133
+3   SaludM / totper 0.3443 8.0250e-07 2.491e-07 0.002602 3.2218
+4  salud55 / totper 0.1594 4.3800e-07 1.648e-07 0.004153 2.6582
+5  DesocTot / FtTot 0.1362 1.2160e-07 1.226e-07 0.002560 0.9921</code></pre>
+</div>
+<div id="totales-poblacionales" class="section level2">
+<h2>Totales Poblacionales</h2>
+<pre><code># A tibble: 3 × 6
+      name       est    var_2s   var_msa         cv      deff
+     &lt;chr&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;      &lt;dbl&gt;     &lt;dbl&gt;
+1   totper 75730.415 4243882.4 1252763.5 0.02720266 3.3876166
+2    FtTot 49408.037 1677431.0  770360.6 0.02621348 2.1774620
+3 DesocTot  6730.768  113140.6  117303.0 0.04997405 0.9645157</code></pre>
+</div>
+<div id="ingreso-medio" class="section level2">
+<h2>Ingreso Medio</h2>
+<div id="poblacional" class="section level3">
+<h3>Poblacional</h3>
+<pre><code># A tibble: 1 × 6
+  dominio ingreso_medio   var_2s  var_msa         cv     deff
+    &lt;dbl&gt;         &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;      &lt;dbl&gt;    &lt;dbl&gt;
+1       1      19440.56 265076.9 148632.9 0.02648361 1.783434</code></pre>
+</div>
+<div id="segun-presencia-de-menores-de-10-anos-en-el-hogar" class="section level3">
+<h3>Según presencia de menores de 10 años en el hogar</h3>
+<pre><code># A tibble: 2 × 6
+  dominio ingreso_medio    var_2s  var_msa         cv     deff
+    &lt;dbl&gt;         &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;      &lt;dbl&gt;    &lt;dbl&gt;
+1       0      18988.56  527964.8 221763.8 0.03826576 2.380753
+2       1      20294.39 2053888.1 447791.5 0.07061751 4.586706</code></pre>
+</div>
+<div id="segun-numero-de-integrantes-del-hogar" class="section level3">
+<h3>Según número de integrantes del hogar</h3>
+<pre><code># A tibble: 4 × 6
+  dominio ingreso_medio    var_2s  var_msa         cv     deff
+    &lt;chr&gt;         &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;      &lt;dbl&gt;    &lt;dbl&gt;
+1       A      8063.258  785731.9 264070.0 0.10993263 2.975468
+2       B     15580.957 1748392.7 342162.7 0.08486436 5.109828
+3       C     21033.034  782957.4 309252.3 0.04206948 2.531776
+4       D     27102.818 3864392.0 877847.0 0.07253141 4.402125</code></pre>
+</div>
 </div>
 </div>
 

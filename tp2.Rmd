@@ -1,15 +1,15 @@
 ---
 title: "MPF: Trabajo Práctico 2"
 author: "Gonzalo Barrera Borla"
-date: "March 31, 2017"
-output: html_document
+date: "Marzo 31, 2017"
+output: 
+  html_document
 ---
 
 ```{r knitr_options, include=FALSE}
 library(knitr)
-opts_chunk$set(fig.width=12, fig.height=6, message=FALSE)
+opts_chunk$set(fig.width=12, fig.height=6, message=FALSE, comment=NA)
 ```
-
 
 # Acondicionamiento Inicial
 ## Carga de librerías
@@ -22,7 +22,10 @@ library(purrr)
 ```
 
 ## Carga de datos
-Además de la información referente a las unidades primarias (radios censales) y secundarias (viviendas) en sí, incluimos la cantidad de radios a tomar de cada estrato (`n_UP_por_estrato`) y la cantidad de viviendas en cada radio (`n_US_por_radio`), segun su estrato de pertenencia.
+Además de la información referente a las unidades primarias (`radiosTP2`) y secundarias (`muestraTP2`) en sí, incluimos
+
+* la cantidad de radios a tomar de cada estrato (`n_UP_por_estrato`) y
+* la cantidad de viviendas en cada radio (`n_US_por_radio`), según el estrato al que pertenencen.
 
 ```{r carga_datos}
 load("data/radiosTP2.RData")
@@ -32,19 +35,19 @@ n_UP_por_estrato <- c(6, 9, 3)
 n_US_por_radio <- c(90, 50, 80)
 ```
 
-# Manipulacion de datos
-A lo largo del TP se utilizaron intensamente las librerías `dplyr` y `purrr` junto con el operador `%>%` (análogo a un _pipe_ '|' de UNIX) de `magrittr` para manipular los datos originales, y computar estadísticas sobre ellos.
+# Manipulación de datos
+A lo largo del TP se utilizaron intensamente las librerías [dplyr](doc/dplyr.pdf) y [purrr](doc/purrr.pdf) junto con el operador `%>%` (análogo a un _pipe_ '|' de UNIX, importado de `magrittr`) para manipular los datos originales, y computar estadísticas sobre ellos.
 
 ## Radios
 
-### Manipulación y adición de variables utiles
+### Manipulación y adición de variables útiles
 
 El siguiente fragmento de código ejecuta una serie de operaciones:
 
 * Asignar los tamaños muestrales de primera y segunda etapa a todos los radios según su estrato.
 * Agrupar los radios por estrato, y para cada uno,
-  + Asignar un ID "intra-estrato" a cada radio,
-  + Calcular las probabilidades de inclusión de primer orden $\pi_{hi}^{UP}$ (pedido en **1.b**) (`PIK_UP`) para los radios, proporcionales a la cantidad de viviendas `Tviv` en cada uno, 
+    + Asignar un ID "intra-estrato" a cada radio,
+    + Calcular las probabilidades de inclusión de primer orden $\pi_{hi}^{UP}$ (pedido en **1.b**) (`PIK_UP`) para los radios, proporcionales a la cantidad de viviendas `Tviv` en cada uno, 
   + Generar un vector `I` que indica la pertenencia a la muestra de UP, segun el método de Sampford, con probabilidades de inclusión `PIK_UP`,
   + Calcular las probablidades de inclusión de primer orden para las US (viviendas) _dentro de cada radio_, $\pi_{k|h}$ (`PIK_US_RADIO`) (pedido en **1.c**),
   + Calcular las probabilidades de inclusión de segundo orden para los pares de US _dentro de un mismo radio_, $\pi_{kl|h}$ (`PIKL_US_RADIO`), y
@@ -231,7 +234,7 @@ PIKL_US_MSA <- generar_pikl_msa(1230, 22390)
 ```
 
 
-## Estimación de indicadores
+# Estimación de indicadores
 
 Entre los estimadores a calcular, podemos distinguir 2 grupos:
 
@@ -286,14 +289,6 @@ construir_estimador_razon <- function(df, y, x){
     )
 }
 
-calcular_indicadores <- function(df, y, x) {
-    if (x == ''){
-    construir_estimador_total(df, y)
-  } else
-    construir_estimador_razon(df, y, x)
-}
-
-
 ingreso_medio_por_dominio <- function(var_dominio){
 viviendas %>%
   group_by(dominio = viviendas[[var_dominio]]) %>%
@@ -318,14 +313,48 @@ Para concluir, a continuación calculamos los estimadores y presentamos los resu
 
 ```{r calculo_estimadores}
 cocientes <- read.csv("data/cocientes.csv", as.is=TRUE)
-map2_df(cocientes$y, cocientes$x,
-          function(y, x) (calcular_indicadores(viviendas, y, x))) -> resultados_globales
+cer_viviendas <- function(y, x) (construir_estimador_razon(viviendas, y, x))
+cocientes_poblacionales <- map2_df(cocientes$y, cocientes$x, cer_viviendas)
+
+totales <- c("totper", "FtTot", "DesocTot")
+cet_viviendas <- function(x) (construir_estimador_total(viviendas, x))
+totales_poblacionales <- map_df(totales, cet_viviendas)
+
 ingreso_medio <- ingreso_medio_por_dominio("uno")
 ingreso_medio_hog10 <- ingreso_medio_por_dominio("hog10")
 ingreso_medio_clase <- ingreso_medio_por_dominio("clase")
+```
 
-resultados_globales
+# Resultados
+
+## Cocientes Poblacionales
+```{r cocientes_poblacionales, echo = FALSE}
+cocientes_poblacionales %>%
+  mutate(est = round(est, 4),
+         var_2s = round(var_2s, 10),
+         var_msa = round(var_msa, 10),
+         cv = round(cv,6),
+         deff = round(deff, 4))
+```
+
+## Totales Poblacionales
+```{r totales_poblacionales, echo = FALSE}
+totales_poblacionales
+```
+
+## Ingreso Medio
+
+### Poblacional
+```{r ingreso_medio, echo = FALSE}
 ingreso_medio
+```
+
+### Según presencia de menores de 10 años en el hogar
+```{r ingreso_medio_hog10, echo = FALSE}
 ingreso_medio_hog10
+```
+
+### Según número de integrantes del hogar
+```{r ingreso_medio_clase, echo = FALSE}
 ingreso_medio_clase
 ```
