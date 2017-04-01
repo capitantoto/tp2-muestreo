@@ -147,22 +147,24 @@ n_US_por_radio &lt;- c(90, 50, 80)</code></pre>
 </div>
 </div>
 <div id="manipulacion-de-datos" class="section level1">
-<h1>Manipulacion de datos</h1>
+<h1>Manipulación de datos</h1>
 <p>A lo largo del TP se utilizaron intensamente las librerías <a href="doc/dplyr.pdf">dplyr</a> y <a href="doc/purrr.pdf">purrr</a> junto con el operador <code>%&gt;%</code> (análogo a un <em>pipe</em> ‘|’ de UNIX, importado de <code>magrittr</code>) para manipular los datos originales, y computar estadísticas sobre ellos.</p>
 <div id="radios" class="section level2">
 <h2>Radios</h2>
 <div id="manipulacion-y-adicion-de-variables-utiles" class="section level3">
-<h3>Manipulación y adición de variables utiles</h3>
+<h3>Manipulación y adición de variables útiles</h3>
 <p>El siguiente fragmento de código ejecuta una serie de operaciones:</p>
 <ul>
 <li>Asignar los tamaños muestrales de primera y segunda etapa a todos los radios según su estrato.</li>
-<li>Agrupar los radios por estrato, y para cada uno,</li>
+<li>Agrupar los radios por estrato, y para cada uno,
+<ul>
 <li>Asignar un ID “intra-estrato” a cada radio,</li>
-<li>Calcular las probabilidades de inclusión de primer orden <span class="math inline">\(\pi_{hi}^{UP}\)</span> (pedido en <strong>1.b</strong>) (<code>PIK_UP</code>) para los radios, proporcionales a la cantidad de viviendas <code>Tviv</code> en cada uno,</li>
-<li>Generar un vector <code>I</code> que indica la pertenencia a la muestra de UP, segun el método de Sampford, con probabilidades de inclusión <code>PIK_UP</code>,</li>
-<li>Calcular las probablidades de inclusión de primer orden para las US (viviendas) <em>dentro de cada radio</em>, <span class="math inline">\(\pi_{k|h}\)</span> (<code>PIK_US_RADIO</code>) (pedido en <strong>1.c</strong>),</li>
+<li>Calcular las probabilidades de inclusión de primer orden <span class="math inline">\(\pi_{hi}^{UP}\)</span> (<code>PIK_UP</code>) para los radios, proporcionales a la cantidad de viviendas <code>Tviv</code> en cada uno,</li>
+</ul></li>
+<li>Generar un vector <code>I</code> que indica la pertenencia a la muestra de unidades primarias, según el método de Sampford, con probabilidades de inclusión <code>PIK_UP</code>,</li>
+<li>Calcular las probablidades de inclusión de primer orden para las US (viviendas) <em>dentro de cada radio</em>, <span class="math inline">\(\pi_{k|h}\)</span> (<code>PIK_US_RADIO</code>),</li>
 <li>Calcular las probabilidades de inclusión de segundo orden para los pares de US <em>dentro de un mismo radio</em>, <span class="math inline">\(\pi_{kl|h}\)</span> (<code>PIKL_US_RADIO</code>), y</li>
-<li>Calcular las probablidades de inclusión de primer orden para las US (viviendas) <em>dentro de la muesta completa</em>, <span class="math inline">\(\pi_{k} = \pi_{hi}^{UP} \times \pi_{kl|h}\)</span> (<code>PIK_US_RADIO</code>)</li>
+<li>Calcular las probablidades de inclusión de primer orden para las US (viviendas) <em>dentro de la muesta completa</em>, <span class="math inline">\(\pi_{k} = \pi_{hi}^{UP} \times \pi_{kl|h}\)</span> (<code>PIK_US</code>)</li>
 </ul>
 <pre class="r"><code>radiosTP2 %&gt;%
   mutate(
@@ -179,8 +181,8 @@ n_US_por_radio &lt;- c(90, 50, 80)</code></pre>
   ungroup() -&gt; radios</code></pre>
 </div>
 <div id="calculo-de-probabilidades-de-inclusion-de-segundo-orden" class="section level3">
-<h3>Calculo de probabilidades de inclusion de segundo orden</h3>
-<p>El siguiente bloque calcular las <span class="math inline">\(\pi_{hij}^{UP}\)</span> para las viviendas en cada estrato, como se pide en <strong>1.b</strong>.</p>
+<h3>Cálculo de probabilidades de inclusión de segundo orden</h3>
+<p>El siguiente bloque calcular las <span class="math inline">\(\pi_{h,ij}^{UP}\)</span> para cada par de radios pertenecientes a un mismo estrato estrato <span class="math inline">\(h\)</span>.</p>
 <pre class="r"><code>PIKL_UP_por_estrato &lt;- map(
   c(1:3),
   function(h) (
@@ -190,34 +192,33 @@ n_US_por_radio &lt;- c(90, 50, 80)</code></pre>
 </div>
 <div id="seleccion-de-la-muestra-de-unidades-primarias" class="section level3">
 <h3>Selección de la muestra de Unidades Primarias</h3>
-<p>Utilizando el vector <code>I</code> de <code>radios</code> creado previamente, filtrar el marco con los radios para quedarnos únicamente con la muestra elegida es muy sencillo. Para poder asociarla fácilmente al marco de viviendas que cargaremos a continuación, agregamos <em>otro</em> identificador más a los radios, <code>upm</code>.</p>
+<p>Filtramos los <code>radios</code> por el vector de inclusión <code>I</code> para quedarnos únicamente con la muestra elegida. Para poder asociarla fácilmente al marco de viviendas que cargaremos a continuación, agregamos <em>otro</em> identificador más a los radios, <code>upm</code>.</p>
 <pre class="r"><code>radios %&gt;%
   filter(I == 1) %&gt;% 
   group_by(Estrato) %&gt;%
   mutate(upm = 1:n()) %&gt;%
   ungroup -&gt; muestra_radios</code></pre>
-<p>Como se pide en <strong>1.b</strong>, a continuación se presenta un resumen con las unidades seleccionadas y sus respectivas probabilidades <span class="math inline">\(\pi_{hi}^{UP}\)</span> de primera etapa.</p>
-<pre class="r"><code>muestra_radios %&gt;% select (Estrato, Radio, Tviv, PIK_UP) </code></pre>
+<p>A continuación se presenta un resumen con las unidades seleccionadas y sus respectivas probabilidades <span class="math inline">\(\pi_{h,i}^{UP}\)</span> de primera etapa.</p>
 <pre><code># A tibble: 18 × 4
    Estrato Radio  Tviv    PIK_UP
      &lt;int&gt; &lt;int&gt; &lt;int&gt;     &lt;dbl&gt;
-1        1     5   354 0.2248571
-2        1     6   345 0.2191404
-3        1     8   389 0.2470887
-4        1    13   414 0.2629685
-5        1    14   416 0.2642388
-6        1    18   297 0.1886513
-7        2    20   289 0.2543765
-8        2    23   422 0.3714425
-9        2    32   322 0.2834230
-10       2    38   306 0.2693399
-11       2    40   321 0.2825428
-12       2    47   387 0.3406357
-13       2    50   322 0.2834230
-14       2    56   314 0.2763814
-15       2    64   334 0.2939853
-16       3    10   397 0.4380287
-17       3    30   401 0.4424421
+1        1    14   416 0.2642388
+2        1    29   375 0.2381961
+3        1    35   316 0.2007199
+4        1    45   332 0.2108829
+5        1    58   429 0.2724963
+6        1    60   420 0.2667796
+7        2     1   312 0.2746210
+8        2    19   407 0.3582396
+9        2    38   306 0.2693399
+10       2    41   285 0.2508557
+11       2    42   283 0.2490954
+12       2    46   307 0.2702200
+13       2    47   387 0.3406357
+14       2    49   322 0.2834230
+15       2    50   322 0.2834230
+16       3    17   292 0.3221773
+17       3    24   283 0.3122471
 18       3    44   306 0.3376241</code></pre>
 <p>Para completar, incluimos el conjunto de las <span class="math inline">\(\pi_{hij}^{UP}\)</span> para las unidades seleccionadas, por estrato:</p>
 <pre class="r"><code>get_pikl_up_muestra_estrato &lt;- function(i) {
@@ -227,34 +228,34 @@ n_US_por_radio &lt;- c(90, 50, 80)</code></pre>
 map(c(1:3), get_pikl_up_muestra_estrato)</code></pre>
 <pre><code>[[1]]
        [,1]   [,2]   [,3]   [,4]   [,5]   [,6]
-[1,] 0.2249 0.0425 0.0482 0.0515 0.0517 0.0364
-[2,] 0.0425 0.2191 0.0469 0.0501 0.0504 0.0355
-[3,] 0.0482 0.0469 0.2471 0.0568 0.0571 0.0402
-[4,] 0.0515 0.0501 0.0568 0.2630 0.0609 0.0429
-[5,] 0.0517 0.0504 0.0571 0.0609 0.2642 0.0431
-[6,] 0.0364 0.0355 0.0402 0.0429 0.0431 0.1887
+[1,] 0.2642 0.0549 0.0460 0.0484 0.0632 0.0618
+[2,] 0.0549 0.2382 0.0412 0.0434 0.0567 0.0555
+[3,] 0.0460 0.0412 0.2007 0.0363 0.0475 0.0464
+[4,] 0.0484 0.0434 0.0363 0.2109 0.0500 0.0489
+[5,] 0.0632 0.0567 0.0475 0.0500 0.2725 0.0638
+[6,] 0.0618 0.0555 0.0464 0.0489 0.0638 0.2668
 
 [[2]]
         [,1]   [,2]   [,3]   [,4]   [,5]   [,6]   [,7]   [,8]   [,9]
- [1,] 0.2544 0.0872 0.0658 0.0624 0.0655 0.0796 0.0658 0.0641 0.0683
- [2,] 0.0872 0.3714 0.0974 0.0924 0.0971 0.1178 0.0974 0.0949 0.1012
- [3,] 0.0658 0.0974 0.2834 0.0698 0.0733 0.0890 0.0735 0.0716 0.0764
- [4,] 0.0624 0.0924 0.0698 0.2693 0.0695 0.0844 0.0698 0.0680 0.0724
- [5,] 0.0655 0.0971 0.0733 0.0695 0.2825 0.0887 0.0733 0.0714 0.0761
- [6,] 0.0796 0.1178 0.0890 0.0844 0.0887 0.3406 0.0890 0.0867 0.0924
- [7,] 0.0658 0.0974 0.0735 0.0698 0.0733 0.0890 0.2834 0.0716 0.0764
- [8,] 0.0641 0.0949 0.0716 0.0680 0.0714 0.0867 0.0716 0.2764 0.0744
- [9,] 0.0683 0.1012 0.0764 0.0724 0.0761 0.0924 0.0764 0.0744 0.2940
+ [1,] 0.2746 0.0908 0.0675 0.0627 0.0623 0.0677 0.0861 0.0712 0.0712
+ [2,] 0.0908 0.3582 0.0890 0.0827 0.0821 0.0893 0.1134 0.0938 0.0938
+ [3,] 0.0675 0.0890 0.2693 0.0615 0.0610 0.0664 0.0844 0.0698 0.0698
+ [4,] 0.0627 0.0827 0.0615 0.2509 0.0567 0.0617 0.0785 0.0648 0.0648
+ [5,] 0.0623 0.0821 0.0610 0.0567 0.2491 0.0613 0.0779 0.0644 0.0644
+ [6,] 0.0677 0.0893 0.0664 0.0617 0.0613 0.2702 0.0847 0.0700 0.0700
+ [7,] 0.0861 0.1134 0.0844 0.0785 0.0779 0.0847 0.3406 0.0890 0.0890
+ [8,] 0.0712 0.0938 0.0698 0.0648 0.0644 0.0700 0.0890 0.2834 0.0735
+ [9,] 0.0712 0.0938 0.0698 0.0648 0.0644 0.0700 0.0890 0.0735 0.2834
 
 [[3]]
        [,1]   [,2]   [,3]
-[1,] 0.4380 0.1556 0.1136
-[2,] 0.1556 0.4424 0.1150
-[3,] 0.1136 0.1150 0.3376</code></pre>
+[1,] 0.3222 0.0723 0.0791
+[2,] 0.0723 0.3122 0.0763
+[3,] 0.0791 0.0763 0.3376</code></pre>
 </div>
 <div id="sobre-delta_kl" class="section level3">
 <h3>Sobre <span class="math inline">\(\Delta_{kl}\)</span></h3>
-<p>Recordemos que <span class="math inline">\(\Delta_{kl} = \pi_{kl} - \pi_{k} \times \pi_{l}\)</span>. Como la selección de radios y hogares dentro de un estrato es absolutamente independientes de lo que suceda en los demás, cuando <span class="math inline">\(k\)</span> y <span class="math inline">\(l\)</span> pertenecen a distintos estratos, <span class="math inline">\(\pi_{kl} - \pi_{k} \times \pi_{l}\)</span>. Luego, <span class="math display">\[
+<p>Recordemos que <span class="math inline">\(\Delta_{kl} = \pi_{kl} - \pi_{k} \times \pi_{l}\)</span>. Como la selección de radios y hogares dentro de un estrato es absolutamente independientes de lo que suceda en los demás, cuando <span class="math inline">\(k\)</span> y <span class="math inline">\(l\)</span> pertenecen a distintos estratos, <span class="math inline">\(\pi_{kl} = \pi_{k} \times \pi_{l}\)</span>. Luego, <span class="math display">\[
 \begin{align}
 \Delta_{kl} &amp;= \pi_{kl} - \pi_{k} \times \pi_{l} \\
 \Delta_{kl} &amp;= \pi_{k} \times \pi_{l} - \pi_{k} \times \pi_{l} \\
@@ -265,12 +266,13 @@ map(c(1:3), get_pikl_up_muestra_estrato)</code></pre>
 </div>
 <div id="viviendas" class="section level2">
 <h2>Viviendas</h2>
-<div id="manipulacion-y-adicion-de-variables-utiles" class="section level3">
+<div id="manipulacion-y-adicion-de-variables-utiles-1" class="section level3">
 <h3>Manipulación y adición de variables útiles</h3>
-<p>A continuación, vamos a precalcular algunas variables útiles a nivel de viviendas. Las declaraciones de la mayoría son autoexplicativas.</p>
-<p>La única que merece atención especial, puede ser <span class="math inline">\(N\)</span>, que a falta de un dato exacto, es nuestra mejor estimación de tamaño de la población de viviendas.</p>
-<p>Para concluir este bloque, fusionamos los datos de cda US (vivienda) junto con los de su UP (radio) “padre”, y llamamos a este extenso marco de datos <code>viviendas</code>. A partir de él calcularemos las <span class="math inline">\(\pi_{kl}\)</span> de US, y los distintos estimadores propuestos.</p>
+<p>A continuación, calculamos algunas variables útiles a nivel de viviendas: <span class="math inline">\(1\)</span> (<code>uno</code>), <span class="math inline">\(n\)</span>, <span class="math inline">\(N\)</span>, <span class="math inline">\(i\)</span> (<code>id_vivienda</code>),<span class="math inline">\(\pi_{k,MSA}\)</span> . Las declaraciones de la mayoría son autoexplicativas.</p>
+<p>Al no conocer la cantidad exacta de hogares de la población, <span class="math inline">\(N\)</span> debe ser estimado. Presentamos dos formas equivalentes de hacerlo.</p>
+<p>Para concluir este bloque, fusionamos los datos de cada vivienda junto con los de su radio “padre”, y llamamos a este extenso marco de datos <code>viviendas</code>. A partir de él calcularemos las <span class="math inline">\(\pi_{kl}\)</span> de US, y los distintos estimadores propuestos.</p>
 <pre class="r"><code>N &lt;- Est.Total.NHT(muestra_radios$Tviv, muestra_radios$PIK_UP)
+# Alternativamente, N &lt;- Est.Total.NHT(viviendas$uno, viviendas$PIK_US)
 
 muestraTP2 %&gt;%
   mutate(
@@ -283,28 +285,29 @@ muestraTP2 %&gt;%
     FtTot = FTedad2 + FTedad3 + FTedad4,
     OcupTot = Oedad2 + Oedad3 + Oedad4,
     DesocTot = FtTot - OcupTot,
+    # clasificación según tamaño
     clase = ifelse(totper &gt;= 5,  &quot;D&quot;,
                    ifelse(totper &gt;= 3, &quot;C&quot;,
                           ifelse(totper == 2, &quot;B&quot;, &quot;A&quot;)))
     ) %&gt;%
-  # Adjunto valores de radios a sus respectivas viviendas
+  # Adjuntamos valores de radios a sus respectivas viviendas
   merge(muestra_radios, 
         by = c(&quot;Estrato&quot;, &quot;upm&quot;)) %&gt;%
   as_data_frame -&gt; viviendas</code></pre>
 </div>
-<div id="calculo-de-probabilidades-de-inclusion-de-segundo-orden" class="section level3">
+<div id="calculo-de-probabilidades-de-inclusion-de-segundo-orden-1" class="section level3">
 <h3>Cálculo de probabilidades de inclusión de segundo orden</h3>
 <p>El último paso importante antes de comenzar a estimar los indicadores propuestos, es computar la matriz de <span class="math inline">\(\pi_{kl}\)</span> para todo par de unidades secundarias. Éste es el insumo que nos permitirá estimar la varianza de los estimadores calculados.</p>
 <p>Sean <span class="math inline">\((H_{k}, H_{l})\)</span> y <span class="math inline">\((R_{k}, R_{l})\)</span> los estratos y radios a los que pertenecen <span class="math inline">\(k\)</span> y <span class="math inline">\(l\)</span>, respectivamente. Para todo par de viviendas <span class="math inline">\((k, l)\)</span>, debemos considerar 4 posibles casos, <em>en el siguiente orden</em>:</p>
 <ol style="list-style-type: decimal">
 <li>Si <span class="math inline">\(H_{k} \neq H_{l}\)</span>, entonces <span class="math inline">\(\pi_{kl} = \pi_{k} \times \pi_{l}\)</span>, donde <span class="math inline">\(\pi_{k} = \pi_{H_k,i}^{UP} \times \pi_{k|i}\)</span>.</li>
-<li>Si <span class="math inline">\(R_{k} \neq R_{l}\)</span>, entonces <span class="math inline">\(\pi_{kl}= \pi_{H_k,ij}^{UP} \times \pi_{k|i} \times \pi_{l|j}\)</span>.</li>
-<li>Si <span class="math inline">\(k \neq l\)</span>, entonces <span class="math inline">\(\pi_{kl} = \pi_{H_k,i}^{UP} \times \pi_{kl|i}\)</span>, y</li>
+<li>Si <span class="math inline">\(R_{k} \neq R_{l}\)</span> (y <span class="math inline">\(H_{k} = H_{l}\)</span>), entonces <span class="math inline">\(\pi_{kl}= \pi_{H_k,ij}^{UP} \times \pi_{k|i} \times \pi_{l|j}\)</span>.</li>
+<li>Si <span class="math inline">\(k \neq l\)</span> (y <span class="math inline">\(R_{k} = R_{l}\)</span>), entonces <span class="math inline">\(\pi_{kl} = \pi_{H_k,i}^{UP} \times \pi_{kl|i}\)</span>, y</li>
 <li>Si <span class="math inline">\(k = l\)</span>, entonces <span class="math inline">\(\pi_{kl} = \pi_{k} = \pi_{l}\)</span></li>
 </ol>
-<p>A continuación, un conjunto de funciones que implementan el cómputo de la <em>supermatriz</em> de <span class="math inline">\(\pi_{kl}\)</span>:</p>
+<p>A continuación, el cómputo de la <em>supermatriz</em> de <span class="math inline">\(\pi_{kl}\)</span> se implementa en dos funciones:</p>
 <ul>
-<li><code>calcular_pikl_us</code> calcular <span class="math inline">\(\pi_{kl}\)</span> para un par de viviendas <span class="math inline">\((k,l)\)</span>, y</li>
+<li><code>calcular_pikl_us</code> calcula <span class="math inline">\(\pi_{kl}\)</span> para un par de viviendas <span class="math inline">\((k,l)\)</span>, y</li>
 <li><code>generar_PIKL_US</code> construye la supermatriz iterando <code>calcular_pikl_us</code> sobre todo par <span class="math inline">\((k,l)\)</span></li>
 </ul>
 <pre class="r"><code>get_vivienda &lt;- function(i) viviendas %&gt;% slice(i)
@@ -345,8 +348,8 @@ generar_PIKL_US &lt;- function(viviendas) {
   }
   return(mat)
 }</code></pre>
-<p>Para estimar el efecto que tiene nuestro diseño en dos etapas, necesitamos comparar las varianzas obtenidas contr las que obtendríamos en caso de utilizar un MSA simple en una sola etapa. Hay más de una forma de calcular la varianza de un MSA: por ejemplo, en clase utilizamos los comandos <code>varHT</code> y <code>varest</code> de <code>sampling</code>, por ejemplo, o se puede computar la fórmula simplificada que depende sólo de <span class="math inline">\(N\)</span>, <span class="math inline">\(n\)</span> y <span class="math inline">\(S_{y}^2\)</span>.</p>
-<p>Sin embargo, en aras de la consistencia, vamos a seguir un camino tal vez innecesariamente complicado, y utilizar los mismos comandos que para la varianza bajo nuestro diseño. Para ello, necesitaremos una función que genere las <span class="math inline">\(\pi_{kl}\)</span> bajo un MSA genérico de población <span class="math inline">\(N\)</span> y tamaño muestral <span class="math inline">\(n\)</span>, como la siguiente:</p>
+<p>Para estimar el efecto que tiene nuestro diseño en dos etapas, necesitamos comparar las varianzas obtenidas contra las que obtendríamos en caso de utilizar un MSA simple en una sola etapa. Hay más de una forma de calcular la varianza de un MSA. Por ejemplo, con los comandos <code>varHT</code> y <code>varest</code> de <code>sampling</code>, o computando directamente <span class="math inline">\(V_{MSA} = N^{2} \left( \frac{1}{n} - \frac{1}{N} \right)S_{y}^{2}\)</span> .</p>
+<p>Sin embargo, en aras de la consistencia, vamos a seguir un camino <em>tal vez</em> innecesariamente complicado, y utilizar los mismos comandos que para la varianza bajo el diseño en dos etapas, la familia de <code>samplingVarEst::VE.*</code> Para ello, necesitaremos una función que genere las <span class="math inline">\(\pi_{kl}^{MSA}\)</span> para cualquier de población <span class="math inline">\(N\)</span> y tamaño muestral <span class="math inline">\(n\)</span>, como la siguiente:</p>
 <pre class="r"><code>generar_pikl_msa &lt;- function(n, N) {
   outer(1:n, 1:n,
         function(x, y) {
@@ -354,7 +357,7 @@ generar_PIKL_US &lt;- function(viviendas) {
         })
 }</code></pre>
 <p>Sin más preámbulos, generamos ambas matrices de <span class="math inline">\(\pi_{kl}\)</span>.</p>
-<p><em>Nota: Como no logré vectorizarlo, el cálculo de <code>PIKL_US</code> lleva casi una hora en mi computadora. En consecuencia, aquí se encuentra comentado, y en su lugar carga el archivo binario donde se encuentra precomputada.</em></p>
+<p><em>Nota: Como no logré vectorizarlo, el cálculo de</em> <span class="math inline">\(\pi_{kl}\)</span> (<code>PIKL_US</code>) _lleva casi una hora en mi computadora. En consecuencia, aquí se encuentra comentado, y en su lugar se carga un archivo binario precomputado.__</p>
 <pre class="r"><code># PIKL_US &lt;- generar_PIKL_US(viviendas)
 PIKL_US &lt;- readRDS(&quot;data/pikl_us.rds&quot;)
 PIKL_US_MSA &lt;- generar_pikl_msa(1230, 22390)</code></pre>
@@ -368,11 +371,11 @@ PIKL_US_MSA &lt;- generar_pikl_msa(1230, 22390)</code></pre>
 <li>estimadores poblacionales, que a su vez pueden ser</li>
 </ol>
 <ul>
-<li>totales (población, PEA, # desocupados) o</li>
-<li>razones (proporción de cobertura de salud según sexo, tasa de desaocupación);</li>
+<li>totales (población, PEA, et cetera) o</li>
+<li>razones (proporción de cobertura de salud según sexo, tasa de desaocupación, et cetera);</li>
 </ul>
 <ol start="2" style="list-style-type: decimal">
-<li>estimadores por dominio, que son todos promedios: por tamaño del hogar o presencia de niños menores de 10 años.</li>
+<li>estimadores por dominio de promedios (ingreso medio por tamaño del hogar o presencia de niños menores de 10 años).</li>
 </ol>
 <p>En realidad, hay un caso de estimador poblacional de un promedio, el “Ingreso promedio en los hogares”. Sin embargo, si lo consideramos como un estimador por dominio sobre la variable auxiliar “uno”, nuestra clasificación se mantiene ilesa, y podemos escribir una función menos.</p>
 <p>Las funciones a continuación, computan estimadores de:</p>
@@ -421,19 +424,19 @@ viviendas %&gt;%
   mutate(n_clase = n(),
          N_clase = round(Est.Total.NHT(uno, PIK_US)),
          PIK_US_MSA_dom = n_clase / N_clase) %&gt;%
-  summarise(ingreso_medio = Est.Mean.NHT(ingresoh, PIK_US, max(N_clase)),
-            var_2s = VE.HT.Mean.NHT(ingresoh, PIK_US, 
-                                 PIKL_US[id_vivienda, id_vivienda],
-                                 max(N_clase)),
-            var_msa = VE.HT.Mean.NHT(ingresoh, PIK_US_MSA_dom, 
-                                  generar_pikl_msa(max(n_clase), max(N_clase)),
-                                  max(N_clase)),
-            cv = sqrt(var_2s) / ingreso_medio,
-            deff = var_2s / var_msa
-         
+  summarise(
+    ingreso_medio = Est.Mean.NHT(ingresoh, PIK_US, max(N_clase)),
+    var_2s = VE.HT.Mean.NHT(ingresoh, PIK_US, 
+                            PIKL_US[id_vivienda, id_vivienda],
+                            max(N_clase)),
+    var_msa = VE.HT.Mean.NHT(ingresoh, PIK_US_MSA_dom,
+                             generar_pikl_msa(max(n_clase), max(N_clase)),
+                             max(N_clase)),
+    cv = sqrt(var_2s) / ingreso_medio,
+    deff = var_2s / var_msa
   )
 }</code></pre>
-<p>Para concluir, a continuación calculamos los estimadores y presentamos los resultados. Veremos algunas advertencias de que el denominador tiene valores iguales a cero, lo cual es normal a nivel de viviendas.</p>
+<p>Para concluir, calculamos los estimadores y presentamos los resultados. Veremos algunas advertencias de que en algunos casos, elementos del vector denominador tiene valores iguales a cero, lo cual es normal en este tipo de variables.</p>
 <pre class="r"><code>cocientes &lt;- read.csv(&quot;data/cocientes.csv&quot;, as.is=TRUE)
 cer_viviendas &lt;- function(y, x) (construir_estimador_razon(viviendas, y, x))
 cocientes_poblacionales &lt;- map2_df(cocientes$y, cocientes$x, cer_viviendas)</code></pre>

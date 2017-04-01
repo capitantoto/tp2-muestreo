@@ -291,14 +291,14 @@ construir_estimador_razon <- function(df, y, x){
     )
 }
 
-promedio_por_dominio <- function(var_dominio, var_promedio){
+ingreso_medio_por_dominio <- function(var_dominio){
 viviendas %>%
   group_by(dominio = viviendas[[var_dominio]]) %>%
   mutate(n_clase = n(),
          N_clase = round(Est.Total.NHT(uno, PIK_US)),
          PIK_US_MSA_dom = n_clase / N_clase) %>%
   summarise(
-    ingreso_medio = Est.Mean.NHT(.[[var_promedio]], PIK_US, max(N_clase)),
+    ingreso_medio = Est.Mean.NHT(ingresoh, PIK_US, max(N_clase)),
     var_2s = VE.HT.Mean.NHT(ingresoh, PIK_US, 
                             PIKL_US[id_vivienda, id_vivienda],
                             max(N_clase)),
@@ -322,9 +322,9 @@ totales <- c("totper", "FtTot", "DesocTot")
 cet_viviendas <- function(x) (construir_estimador_total(viviendas, x))
 totales_poblacionales <- map_df(totales, cet_viviendas)
 
-ingreso_medio <- promedio_por_dominio("uno", "ingresoh")
-ingreso_medio_hog10 <- ingreso_medio_por_dominio("hog10", "ingresoh")
-ingreso_medio_clase <- ingreso_medio_por_dominio("clase", "ingresoh")
+ingreso_medio <- ingreso_medio_por_dominio("uno")
+ingreso_medio_hog10 <- ingreso_medio_por_dominio("hog10")
+ingreso_medio_clase <- ingreso_medio_por_dominio("clase")
 ```
 
 # Resultados
